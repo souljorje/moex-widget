@@ -39,21 +39,45 @@ export default {
       ],
     };
   },
-  // computed: {
-  //   rows: {
-  //     get() {
-  //       return this.generatedRows;
-  //     },
-  //     set(data) {
-  //       this.generatedRows = this.generateRows(data);
-  //     }
-  //   }
-  // },
   methods: {
-    async requestData() {
-      debugger;
+    async generateUrl() {
       const instrumentsPairs = this.instruments.map(item => `${item.BOARDID}:${item.SECID}`);
-      const response = await this.$http.get(`stock/markets/index/securities.jsonp?callback=this.parseData&iss.meta=off&iss.only=securities,marketdata&securities=${instrumentsPairs.join(',')}&lang=ru&_=1527752178411`);
+      const defaultHeaders = 'securities.jsonp?callback=this.parseData&iss.meta=off&iss.only=securities,marketdata&';
+      let customHeaders;
+      let path;
+      /**
+       * Of course I understand that pathes should be more flexible,
+       * but my task is quite narrow, so I decided not to try to
+       * foresee everything.
+       */
+      switch (this.type) {
+        case 'futures':
+          path = 'futures/markets/forts/';
+          customHeaders = 'previous_session=0&nearest=1&sectypes=';
+          break;
+        case 'index':
+          path = 'stock/markets/index/';
+          customHeaders = 'securities=';
+          break;
+        case 'bonds':
+          path = 'stock/markets/bonds/';
+          customHeaders = 'securities=';
+          break;
+        case 'shares':
+          path = 'stock/markets/shares/';
+          customHeaders = 'securities=';
+          break;
+        case 'currency':
+          path = 'currency/markets/selt/';
+          customHeaders = 'securities=';
+          break;
+        default:
+          throw new Error('Type of table is not defined');
+      }
+      this.url = `${path}${defaultHeaders}${customHeaders}${instrumentsPairs.join(',')}`;
+    },
+    async requestData() {
+      const response = await this.$http.get(this.url);
       if (response.status !== 200) {
         throw new Error(`Server responded with status ${response.status}`);
       }
@@ -67,9 +91,10 @@ export default {
     },
     parseData(data) {
       const rows = [];
-      this.instruments.forEach((item) => {
+      data.securities.data.forEach((item) => {
+        const rowIndex = data.securities.data.indexOf(item);
         const row = {
-          name: item.SECID,
+          name: item[0],
           cells: [],
         };
         this.cellNames.forEach((cellName) => {
@@ -81,18 +106,26 @@ export default {
           }
           const cell = {
             name: cellName,
-            value: data[cellLocation].data[item.SECID][cellIndex] || '–',
+            value: data[cellLocation].data[rowIndex][cellIndex] || '–',
           };
           row.cells.push(cell);
         });
         rows.push(row);
       });
-      debugger;
       this.rows = rows;
     },
   },
   created() {
-    this.requestData();
+    this.generateUrl()
+      .then(() => {
+        this.requestData();
+      })
+      .catch((error) => {
+        throw new Error(error);
+      });
+    // setInterval(() => {
+    //   this.requestData();
+    // }, this.interval);
   },
 };
 </script>
