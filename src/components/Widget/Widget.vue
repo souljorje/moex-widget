@@ -28,6 +28,7 @@
       type: 'index',
       name: 'Indexes -> Stocks',
       interval: 5000,
+      chart: true,
     }"/>
     <widgetTable
     :config="{

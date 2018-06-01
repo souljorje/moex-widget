@@ -2,6 +2,7 @@ import Vue from 'vue';
 import VueResource from 'vue-resource';
 import App from './App';
 import router from './router';
+import './polyfills/after';
 // import store from './store/store';
 
 

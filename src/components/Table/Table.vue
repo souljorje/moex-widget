@@ -7,14 +7,46 @@
         </th>
       </tr>
     </thead>
-    <tbody>
-      <tableRow v-for="row in rows" :key="row.name" :cells="row.cells"/>
-    </tbody>
+    <!-- <tbody> -->
+      <transition-group tag="tbody" name="slide">
+        <tableRow
+          v-for="row in rows"
+          :key="row.id"
+          @rowShown="checkRow($event)"
+          :config="{
+            rowId: row.id,
+            cells: row.cells,
+            defaultPath: defaultPath,
+            chart,
+            type,
+          }"
+        />
+      </transition-group>
+    <!-- </tbody> -->
   </table>
 </template>
 
 <style lang="stylus">
-
+$translate = 20px
+$duration = 0.2s
+.slide
+  &-enter
+    opacity 0
+    transform translateY($translate)
+  &-enter-active
+    animation slide-in $duration ease forwards
+    transition $duration ease opacity
+  &-leave-active
+    animation slide-out $duration ease forwards
+    transition $duration ease opacity
+    opacity 0
+    position absolute
+    &.card-column
+      width 50%
+  &-move
+    transition transform 0.3s
+    &.alert
+      animation slide-in .3s ease forwards
 </style>
 
 <script>
@@ -30,10 +62,11 @@ export default {
   data() {
     return {
       text: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Molestiae voluptate eligendi reiciendis nulla animi asperiores explicabo ut placeat quisquam velit eaque facilis illo soluta, nesciunt porro sunt laborum delectus aliquam.',
+      chart: false,
       ...this.config,
       rows: [
         {
-          name: '',
+          id: '',
           cells: null,
         },
       ],
@@ -74,6 +107,7 @@ export default {
         default:
           throw new Error('Type of table is not defined');
       }
+      this.defaultPath = path;
       this.url = `${path}${defaultHeaders}${customHeaders}${instrumentsPairs.join(',')}`;
     },
     async requestData() {
@@ -94,7 +128,7 @@ export default {
       data.securities.data.forEach((item) => {
         const rowIndex = data.securities.data.indexOf(item);
         const row = {
-          name: item[0],
+          id: item[0],
           cells: [],
         };
         this.cellNames.forEach((cellName) => {
@@ -113,6 +147,17 @@ export default {
         rows.push(row);
       });
       this.rows = rows;
+    },
+    checkRow(event) {
+      const targetRow = event.targetRow;
+      if (this.shownRow !== targetRow) {
+        if (this.shownChart) {
+          this.shownChart.style.display = 'none';
+        }
+        targetRow.chartShown = false;
+        this.shownRow = event.targetRow;
+        this.shownChart = event.rowChart;
+      }
     },
   },
   created() {
