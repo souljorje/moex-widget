@@ -4,16 +4,20 @@
       <tr>
         <th>
           {{ name || text }}
+          <button @click="suffleRows">
+            Shuffle
+          </button>
         </th>
       </tr>
     </thead>
-    <!-- <tbody> -->
-      <transition-group tag="tbody" name="slide">
+    <tbody is="transition-group" name="slide">
+      <!-- <transition-group tag="tbody" > -->
         <tableRow
           v-for="row in rows"
           :key="row.id"
           @rowShown="checkRow($event)"
           :config="{
+            boardId: row.boardId,
             rowId: row.id,
             cells: row.cells,
             defaultPath: defaultPath,
@@ -21,14 +25,25 @@
             type,
           }"
         />
-      </transition-group>
-    <!-- </tbody> -->
+      <!-- </transition-group> -->
+    </tbody>
   </table>
 </template>
 
 <style lang="stylus">
+
+td
+  text-align right
+  font-size 13px
+  padding 2px
+  &:first-child
+    text-align left
+
+.table-row-move
+  transition all .5s
+
 $translate = 20px
-$duration = 0.2s
+$duration = 0.5s
 .slide
   &-enter
     opacity 0
@@ -40,13 +55,11 @@ $duration = 0.2s
     animation slide-out $duration ease forwards
     transition $duration ease opacity
     opacity 0
-    position absolute
+    position absolut
     &.card-column
       width 50%
   &-move
     transition transform 0.3s
-    &.alert
-      animation slide-in .3s ease forwards
 </style>
 
 <script>
@@ -73,9 +86,21 @@ export default {
     };
   },
   methods: {
+    suffleRows() {
+      const shuffleArray = arr => arr
+        .map(a => [Math.random(), a])
+        .sort((a, b) => a[0] - b[0])
+        .map(a => a[1]);
+      this.rows = shuffleArray(this.rows);
+    },
     async generateUrl() {
       const instrumentsPairs = this.instruments.map(item => `${item.BOARDID}:${item.SECID}`);
-      const defaultHeaders = 'securities.jsonp?callback=this.parseData&iss.meta=off&iss.only=securities,marketdata&';
+      const defaultHeaders = 'iss.meta=off&lang=ru&';
+      const headers = {
+        filters: 'securities/columns/filters.jsonp?callback=this.parseFilters&iss.only=filters&',
+        columns: 'securities/columns.jsonp?callback=this.parseColumns&iss.only=securities,marketdata&',
+        securities: 'securities.jsonp?callback=this.parseData&iss.meta=off&iss.only=securities,marketdata&',
+      };
       let customHeaders;
       let path;
       /**
@@ -108,10 +133,16 @@ export default {
           throw new Error('Type of table is not defined');
       }
       this.defaultPath = path;
-      this.url = `${path}${defaultHeaders}${customHeaders}${instrumentsPairs.join(',')}`;
+      Object.keys(headers).forEach((type) => {
+        let url = `${path}${headers[type]}${defaultHeaders}}`;
+        if (type === 'securities') {
+          url += `${customHeaders}${instrumentsPairs.join(',')}`;
+        }
+        this[`${type}URL`] = url;
+      });
     },
     async requestData() {
-      const response = await this.$http.get(this.url);
+      const response = await this.$http.get(this.securitiesURL);
       if (response.status !== 200) {
         throw new Error(`Server responded with status ${response.status}`);
       }
@@ -128,6 +159,7 @@ export default {
       data.securities.data.forEach((item) => {
         const rowIndex = data.securities.data.indexOf(item);
         const row = {
+          boardId: item[1],
           id: item[0],
           cells: [],
         };
@@ -149,21 +181,32 @@ export default {
       this.rows = rows;
     },
     checkRow(event) {
+      debugger;
       const targetRow = event.targetRow;
       if (this.shownRow !== targetRow) {
         if (this.shownChart) {
-          this.shownChart.style.display = 'none';
+          this.shownChart.remove();
+          this.shownRow.chartShown = false;
         }
-        targetRow.chartShown = false;
         this.shownRow = event.targetRow;
-        this.shownChart = event.rowChart;
       }
+      this.shownChart = event.rowChart;
+      // if (this.shownRow !== targetRow) {
+      //   if (this.shownChart) {
+      //     this.shownChart.style.display = 'none';
+      //   }
+      //   targetRow.chartShown = false;
+      //   this.shownRow = event.targetRow;
+      //   this.shownChart = event.rowChart;
+      // }
     },
   },
   created() {
     this.generateUrl()
       .then(() => {
         this.requestData();
+      }, (error) => {
+        throw new Error(error);
       })
       .catch((error) => {
         throw new Error(error);

@@ -1,0 +1,21 @@
+@keyframes slide-in
+  from
+    opacity 0
+    transform translateY($translate)
+  to
+    opacity 1
+    transform translateY(0)
+
+@keyframes slide-out
+  from
+    opacity 1
+    transform translateY(0)
+  to
+    opacity 0
+    transform translateY($translate)
+
+@keyframes spin
+  from
+    transform rotate(0)
+  to
+    transform rotate(360deg)
