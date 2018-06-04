@@ -1,5 +1,5 @@
 <template>
-  <carousel :perPageCustom="[[0, 1], [768, 2]]">
+  <carousel :perPageCustom="[[0, 1], [768, 2]]" v-if="dataFetch">
     <slide
       v-for="widget in widgets.items"
       :key="widget.name"
@@ -45,6 +45,7 @@ export default {
   data() {
     return {
       widgets,
+      dataFetch: false,
     };
   },
   methods: {
@@ -159,6 +160,7 @@ export default {
         }
       });
       this.$store.state[type].columns = columns;
+      return true;
     },
     /**
      * Makes requests for filters and columns
@@ -183,9 +185,11 @@ export default {
     appTab,
   },
   created() {
-    widgets.types.forEach((type) => {
-      this.init(type);
-    });
+    const fetchData = widgets.types.map(type => this.init(type));
+    Promise.all(fetchData)
+      .then(() => {
+        this.dataFetch = true;
+      });
   },
 };
 </script>

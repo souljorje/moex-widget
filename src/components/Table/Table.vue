@@ -143,20 +143,13 @@ export default {
    * Honestly the most complicated thing to understand
    * for me is a proper way of asynchronous mounting
    * of child components after getting data in parent.
-   * I didn't find any good solution, and would like to
-   * ask how to do it better?
-   * This setTimeout is just a dummy way.
    */
   created() {
-    setTimeout(() => {
-      this.generateURL()
-        .then(() =>
-          this.requestData(this.securitiesURL),
-        )
-        .then((data) => {
-          this.parseSecurities(data);
-        });
-    }, 2000);
+    this.generateURL()
+      .then(() => this.requestData(this.securitiesURL))
+      .then((data) => {
+        this.parseSecurities(data);
+      });
     setInterval(() => {
       this.requestData(this.securitiesURL)
         .then((data) => {
